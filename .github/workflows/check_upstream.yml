@@ -53,7 +53,7 @@ jobs:
           username: ${{ secrets.MAIL_USERNAME }}
           password: ${{ secrets.MAIL_PASSWORD }}
           subject: 🚨 MobSF Upstream Updates Detected!
-          to: your_email@example.com # ضع إيميلك هنا
+          to: itammarragha@gmail.com #ضع إيميلك هنا
           from: MobSF Watcher
           body: |
             There are updates in the official MobSF repository!
