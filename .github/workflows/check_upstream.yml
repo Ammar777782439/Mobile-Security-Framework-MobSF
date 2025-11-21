@@ -2,9 +2,8 @@ name: Check Upstream Updates
 
 on:
   schedule:
-    # يعمل كل يوم جمعة الساعة 9 صباحاً
-    - cron: '0 9 * * 5'
-  workflow_dispatch: # يسمح لك بتشغيله يدوياً بضغطة زر للتجربة ا 
+    - cron: '0 9 * * 5' # كل جمعة
+  workflow_dispatch: # تشغيل يدوي
 
 jobs:
   check-updates:
@@ -13,32 +12,32 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v3
         with:
-          fetch-depth: 0 # مهم جداً لجلب كل التاريخ
+          fetch-depth: 0
 
       - name: Add Upstream & Fetch
         run: |
           git remote add upstream https://github.com/MobSF/Mobile-Security-Framework-MobSF.git
           git fetch upstream master
 
-      - name: Generate Report
+      - name: Generate Full Report
         id: report
         run: |
-          # 1. حساب عدد الكوميتات الجديدة
+          # حساب عدد التغييرات
           COUNT=$(git rev-list HEAD..upstream/master --count)
           
-          echo "New Commits: $COUNT"
+          echo "New Commits Count: $COUNT"
           
           if [ "$COUNT" -gt "0" ]; then
             echo "UPDATES_FOUND=true" >> $GITHUB_ENV
             
-            # 2. استخراج قائمة الملفات المعدلة (عشان تعرف لو لمسوا ملفاتك)
+            # --- التغيير هنا: جلب قائمة بأسماء كل الملفات التي تغيرت ---
             echo "FILES_CHANGED<<EOF" >> $GITHUB_ENV
-            git diff --stat HEAD..upstream/master >> $GITHUB_ENV
+            git diff --name-only HEAD..upstream/master >> $GITHUB_ENV
             echo "EOF" >> $GITHUB_ENV
             
-            # 3. استخراج عناوين التغييرات (Commits Messages)
+            # جلب رسائل التعديلات (عناوين الكوميتات)
             echo "COMMIT_LOG<<EOF" >> $GITHUB_ENV
-            git log HEAD..upstream/master --pretty=format:"- %h: %s (%an)" --no-merges -n 20 >> $GITHUB_ENV
+            git log HEAD..upstream/master --pretty=format:"- %s (%an)" --no-merges -n 50 >> $GITHUB_ENV
             echo "EOF" >> $GITHUB_ENV
           else
             echo "UPDATES_FOUND=false" >> $GITHUB_ENV
@@ -52,21 +51,21 @@ jobs:
           server_port: 465
           username: ${{ secrets.MAIL_USERNAME }}
           password: ${{ secrets.MAIL_PASSWORD }}
-          subject: 🚨 MobSF Upstream Updates Detected!
-          to: itammarragha@gmail.com #ضع إيميلك هنا
+          subject: 🚨 Full MobSF Update Report
+          to: ammarragha@gmail.com # <--- تأكد من كتابة إيميلك هنا
           from: MobSF Watcher
           body: |
-            There are updates in the official MobSF repository!
+            New updates detected in the official MobSF repository.
             
             ---------------------------------------------------
-            FILES CHANGED (Check if your modified files are here):
+            LIST OF ALL CHANGED FILES:
             ---------------------------------------------------
             ${{ env.FILES_CHANGED }}
             
             ---------------------------------------------------
-            LATEST COMMITS (What they added):
+            COMMIT MESSAGES:
             ---------------------------------------------------
             ${{ env.COMMIT_LOG }}
             
             ---------------------------------------------------
-            Action Required: Run 'git fetch upstream' and review changes.
+            Check the repo for details.
