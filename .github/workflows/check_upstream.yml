@@ -4,7 +4,7 @@ on:
   schedule:
     # يعمل كل يوم جمعة الساعة 9 صباحاً
     - cron: '0 9 * * 5'
-  workflow_dispatch: # يسمح لك بتشغيله يدوياً بضغطة زر للتجربة
+  workflow_dispatch: # يسمح لك بتشغيله يدوياً بضغطة زر للتجربة ا 
 
 jobs:
   check-updates:
