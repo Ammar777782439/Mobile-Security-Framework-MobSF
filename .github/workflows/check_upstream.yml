@@ -1,0 +1,72 @@
+name: Check Upstream Updates
+
+on:
+  schedule:
+    # يعمل كل يوم جمعة الساعة 9 صباحاً
+    - cron: '0 9 * * 5'
+  workflow_dispatch: # يسمح لك بتشغيله يدوياً بضغطة زر للتجربة
+
+jobs:
+  check-updates:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0 # مهم جداً لجلب كل التاريخ
+
+      - name: Add Upstream & Fetch
+        run: |
+          git remote add upstream https://github.com/MobSF/Mobile-Security-Framework-MobSF.git
+          git fetch upstream master
+
+      - name: Generate Report
+        id: report
+        run: |
+          # 1. حساب عدد الكوميتات الجديدة
+          COUNT=$(git rev-list HEAD..upstream/master --count)
+          
+          echo "New Commits: $COUNT"
+          
+          if [ "$COUNT" -gt "0" ]; then
+            echo "UPDATES_FOUND=true" >> $GITHUB_ENV
+            
+            # 2. استخراج قائمة الملفات المعدلة (عشان تعرف لو لمسوا ملفاتك)
+            echo "FILES_CHANGED<<EOF" >> $GITHUB_ENV
+            git diff --stat HEAD..upstream/master >> $GITHUB_ENV
+            echo "EOF" >> $GITHUB_ENV
+            
+            # 3. استخراج عناوين التغييرات (Commits Messages)
+            echo "COMMIT_LOG<<EOF" >> $GITHUB_ENV
+            git log HEAD..upstream/master --pretty=format:"- %h: %s (%an)" --no-merges -n 20 >> $GITHUB_ENV
+            echo "EOF" >> $GITHUB_ENV
+          else
+            echo "UPDATES_FOUND=false" >> $GITHUB_ENV
+          fi
+
+      - name: Send Email Notification
+        if: env.UPDATES_FOUND == 'true'
+        uses: dawidd6/action-send-mail@v3
+        with:
+          server_address: smtp.gmail.com
+          server_port: 465
+          username: ${{ secrets.MAIL_USERNAME }}
+          password: ${{ secrets.MAIL_PASSWORD }}
+          subject: 🚨 MobSF Upstream Updates Detected!
+          to: your_email@example.com # ضع إيميلك هنا
+          from: MobSF Watcher
+          body: |
+            There are updates in the official MobSF repository!
+            
+            ---------------------------------------------------
+            FILES CHANGED (Check if your modified files are here):
+            ---------------------------------------------------
+            ${{ env.FILES_CHANGED }}
+            
+            ---------------------------------------------------
+            LATEST COMMITS (What they added):
+            ---------------------------------------------------
+            ${{ env.COMMIT_LOG }}
+            
+            ---------------------------------------------------
+            Action Required: Run 'git fetch upstream' and review changes.
